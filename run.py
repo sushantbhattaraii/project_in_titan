@@ -13,8 +13,9 @@ from collections import Counter
 
 
 request_queue = defaultdict(deque)
-global link_
+global link_, linkArrow_
 link_ = None
+linkArrow_ = None
 
 
 def build_parent_dict(T, root):
@@ -114,6 +115,52 @@ def set_links_for_request(G, T, requesting_node, parent, link_, root):
 
     return dist_u_v_in_G, dist_u_v_in_T
 
+
+def set_links_for_request_for_arrow(G, T, requesting_node, parent, linkArrow_, root):
+    """
+    For a requesting node r:
+    1) Set link_[r] = r.
+    2) Climb up from r to root, flipping pointers so that link_[p] = child,
+       where p is the parent and child is the node from which the request came.
+    3) After establishing these links on the path, set all other links to None.
+    """
+    # Keep track of the path from requesting_node to root
+    path_nodes = []
+
+
+    for node, value in linkArrow_.items():
+        if value == node:
+            owner = node
+
+    dist_u_v_in_mst = nx.shortest_path_length(T, source=owner, target=requesting_node, weight='weight')
+
+    dist_u_v_in_G = nx.shortest_path_length(G, source=owner, target=requesting_node, weight='weight')
+
+    # stretch = float(dist_u_v_in_T / dist_u_v_in_G)
+    
+    # Step 1: requesting_node points to itself
+    linkArrow_[requesting_node] = requesting_node
+    path_nodes.append(requesting_node)
+    
+    # Step 2: climb upwards until we reach the root
+    current = requesting_node
+    while current != root:
+        p = parent[current]
+        # If there's no parent (i.e., current is already root), break
+        if p is None:
+            break
+        linkArrow_[p] = current  # flip pointer
+        path_nodes.append(p)
+        current = p
+    
+    # Step 3: For all other nodes NOT on this path, set link_[node] = None
+    for node in linkArrow_.keys():
+        if node not in path_nodes:
+            linkArrow_[node] = None
+
+    return dist_u_v_in_G, dist_u_v_in_mst
+
+
 def load_graph(network_file_name):
     graphml_file = os.path.join('graphs', str(network_file_name))
     G_example = nx.read_graphml(graphml_file)
@@ -172,7 +219,7 @@ def sample_Q_within_diameter_with_overlap(G, Vp, error_cutoff, overlap):
     random.shuffle(Q)  # Shuffle the list to ensure randomness
     return Q
 
-def calculate_stretch(G_example, T, Vp, fraction, owner, error_cutoff, overlap):
+def calculate_stretch(G_example, T, mst, Vp, fraction, owner, error_cutoff, overlap):
     # V is the set of all vertices in the graph G.
     # print("type of vp is", type(Vp))
     V = list(T.nodes())
@@ -187,11 +234,11 @@ def calculate_stretch(G_example, T, Vp, fraction, owner, error_cutoff, overlap):
     print("Selected Q = ", Q)
 
     print("Total # of vertices (n): ", len(V))
-    print("Total vertices (V):", V)
-    print("Fraction used:", fraction)
-    print("Predicted vertices (Vp):", Vp)
-    print("Requesting nodes (Q):", Q)
-    print("\n--- Move Operations ---")
+    # print("Total vertices (V):", V)
+    # print("Fraction used:", fraction)
+    # print("Predicted vertices (Vp):", Vp)
+    # print("Requesting nodes (Q):", Q)
+    # print("\n--- Move Operations ---")
 
     centers = find_tree_center(T)
     # print("Center(s) of the tree:", centers)
@@ -200,31 +247,38 @@ def calculate_stretch(G_example, T, Vp, fraction, owner, error_cutoff, overlap):
     print("Root node of the final tree T:", root)
 
     parent = build_parent_dict(T, root)
+    parent_arrow = build_parent_dict(mst, root)
 
     # Initialize link[u] = None for all nodes u
     link_ = {u: None for u in T.nodes()}
+    linkArrow_ = {u: None for u in mst.nodes()}
     
     # Optionally, you might set link[owner] = owner if you want
     # to indicate that the owner points to itself.
     link_[owner] = owner
+    linkArrow_[owner] = owner
     
     # print("Initial parent dictionary:", parent)
     # print("Initial link:", link_)
     
     # Run publish() from owner = 5
     publish(T, owner, root, parent, link_)
+    publish(mst, owner, root, parent_arrow, linkArrow_)
     
-    print("\nAfter running publish() from owner")
-    print("Updated link:", link_)
+    # print("\nAfter running publish() from owner")
+    # print("Updated link:", link_)
 
     distances_in_G = []
     distances_in_T = []
+    distances_in_mst = []
     for r in Q:
         # print(f"\nRequest from node {r} ... ")
         d_in_G, d_in_T = set_links_for_request(G_example, T, r, parent, link_, root)
+        d_in_G, d_in_mst = set_links_for_request_for_arrow(G_example, mst, r, parent_arrow, linkArrow_, root)
         # stretch_i = float(d_in_T) / d_in_G if d_in_G != 0.0 else float('inf')
         distances_in_G.append(d_in_G)
         distances_in_T.append(d_in_T)
+        distances_in_mst.append(d_in_mst)
         # print(f"\nDistance between request node {r} and owner node in T is {d_in_T}, stretch = {stretch_i:.4f}")
 
         # print("Updated link_ after request:")
@@ -237,13 +291,17 @@ def calculate_stretch(G_example, T, Vp, fraction, owner, error_cutoff, overlap):
     # print(distances_in_T)
     sum_of_distances_in_G = sum(distances_in_G)
     sum_of_distances_in_T = sum(distances_in_T)
+    sum_of_distances_in_mst = sum(distances_in_mst)
     stretch = sum_of_distances_in_T / sum_of_distances_in_G if sum_of_distances_in_G != 0 else float('inf')
+    stretch_arrow = sum_of_distances_in_mst / sum_of_distances_in_G if sum_of_distances_in_G != 0 else float('inf')
     # print("Type of distances in G:", type(distances_in_G))
     # print("Type of distances in T:", type(distances_in_T))
     # stretch = max(stretches) if stretches else 0
     GREEN = "\033[92m"
     RESET = "\033[0m"
+    SKY_BLUE = "\033[94m"
     print(f"{GREEN}\nStretch (sum_of_distance_in_T / sum_of_distance_in_G) = {stretch}{RESET}")
+    print(f"{SKY_BLUE}\nStretch_Arrow (sum_of_distance_in_mst / sum_of_distance_in_G) = {stretch_arrow}{RESET}")
     return Q
 
 
@@ -293,13 +351,19 @@ def main(fraction, network_file_name, error_cutoff, overlap):
     # Compute Final tree T
     T = augment_steiner_tree_with_remaining_vertices(G_example, T_H)
 
+    # Contrcut MST of Grapg G_example for Arrow protocol
+    mst = nx.minimum_spanning_tree(G_example, weight='weight')
+
     # verifying the edge weights by printing them
     # for u, v, weight in T.edges(data='weight'):
     #     print(f"Edge ({u}, {v}) has weight: {weight}")
 
     # show_graph(T)
     overlap = int(overlap)
-    Q = calculate_stretch(G_example, T, Vp, fraction, owner, error_cutoff, overlap)
+    Q = calculate_stretch(G_example, T, mst, Vp, fraction, owner, error_cutoff, overlap)
+
+    # calculate_stretch(G_example, mst, Vp, fraction, owner, error_cutoff, overlap)
+
 
     diameter_of_T = nx.diameter(T, weight='weight')
 

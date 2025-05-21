@@ -11,6 +11,7 @@ def main(network_file_name, repetitions, error_cutoff, overlap):
     max_errors = []
     min_errors = []
     stretches = []
+    stretches_arrow = []
     for rep in range(repetitions):
         # The four fraction values
         fractions = [1/32, 1/16, 1/8, 1/4, 1/2]
@@ -33,6 +34,10 @@ def main(network_file_name, repetitions, error_cutoff, overlap):
             r"Stretch \(sum_of_distance_in_T / sum_of_distance_in_G\) =\s*([0-9.+\-eE]+)"
         )
 
+        pattern5 = re.compile(
+            r"Stretch_Arrow \(sum_of_distance_in_mst / sum_of_distance_in_G\) =\s*([0-9.+\-eE]+)"
+        )
+
         for frac in fractions:
             print(f"\n=== Running run.py with --fraction {frac:.6f}  and Iteration {rep} ===")
             proc = subprocess.Popen(
@@ -52,6 +57,7 @@ def main(network_file_name, repetitions, error_cutoff, overlap):
                 m2 = pattern2.search(line)
                 m3 = pattern3.search(line)
                 m4 = pattern4.search(line)
+                m5 = pattern5.search(line)
                 if m:
                     max_error_value = float(m.group(1))
                 if m2:
@@ -60,6 +66,8 @@ def main(network_file_name, repetitions, error_cutoff, overlap):
                     stretch_value = float(m3.group(1))
                 if m4:
                     min_error_value = float(m4.group(1))
+                if m5:
+                    stretch_arrow_value = float(m5.group(1))
             
             proc.wait()
             if proc.returncode != 0:
@@ -68,6 +76,7 @@ def main(network_file_name, repetitions, error_cutoff, overlap):
             max_errors.append(max_error_value)
             min_errors.append(min_error_value)
             stretches.append(stretch_value)
+            stretches_arrow.append(stretch_arrow_value)
             nodes_count.append(num_nodes)
 
 
@@ -84,7 +93,7 @@ def main(network_file_name, repetitions, error_cutoff, overlap):
     filename = str(nodes_count[0])+"nodes_diameter"+str(diameter_value)+"_cutoff"+str(error_cutoff)+"-repetitions"+str(repetitions)+ "-overlap"+str(overlap)+".png"
 
     # plot_error_and_stretch_graph_with_boxplot(fractions, errors, filename, repetitions, stretches, error_cutoff, overlap)
-    save_error_stretch_to_excel(fractions, max_errors, min_errors, stretches, filename, repetitions, error_cutoff)
+    save_error_stretch_to_excel(fractions, max_errors, min_errors, stretches, stretches_arrow, filename, repetitions, error_cutoff)
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Running the experiment with different fractions of predicted nodes and with different graphs... ")

@@ -2,7 +2,7 @@ import pandas as pd
 import os
 import re
 
-def save_error_stretch_to_excel(fractions, max_errors, min_errors, stretches, file_name, reps, error_cutoff):
+def save_error_stretch_to_excel(fractions, max_errors, min_errors, stretches, stretches_arrow, file_name, reps, error_cutoff):
     """
     Save both raw and summary statistics of error and stretch data to an Excel file.
     """
@@ -11,19 +11,21 @@ def save_error_stretch_to_excel(fractions, max_errors, min_errors, stretches, fi
     groups_max_error = [max_errors[i::n_groups] for i in range(n_groups)]
     groups_min_error = [min_errors[i::n_groups] for i in range(n_groups)]
     groups_stretch = [stretches[i::n_groups] for i in range(n_groups)]
+    groups_stretch_arrow = [stretches_arrow[i::n_groups] for i in range(n_groups)]
 
     # Prepare raw records
     total_nodes = int(re.findall(r'\d+\.?\d*', file_name)[0])
     raw_records = []
-    for frac, max_err_list, min_err_list, str_list in zip(fractions, groups_max_error, groups_min_error, groups_stretch):
+    for frac, max_err_list, min_err_list, str_list, str_arrow_list in zip(fractions, groups_max_error, groups_min_error, groups_stretch, groups_stretch_arrow):
         num_nodes = int(frac * total_nodes)
-        for max_err, min_err, strc in zip(max_err_list, min_err_list, str_list):
+        for max_err, min_err, strc, str_arrow_c in zip(max_err_list, min_err_list, str_list, str_arrow_list):
             raw_records.append({
                 'fraction': frac,
                 'num_nodes': num_nodes,
                 'max_error': max_err,
                 'min_error': min_err,
                 'stretch': strc,
+                'stretch_arrow': str_arrow_c,
                 'reps': reps,
                 'error_cutoff': error_cutoff,
                 'file_name': file_name
@@ -32,7 +34,7 @@ def save_error_stretch_to_excel(fractions, max_errors, min_errors, stretches, fi
 
     # Compute summary statistics
     summary_records = []
-    for frac, max_err_list, min_err_list, str_list in zip(fractions, groups_max_error, groups_max_error, groups_stretch):
+    for frac, max_err_list, min_err_list, str_list, str_arrow_list in zip(fractions, groups_max_error, groups_max_error, groups_stretch, groups_stretch_arrow):
         num_nodes = int(frac * total_nodes)
         summary_records.append({
             'fraction': frac,
@@ -46,6 +48,9 @@ def save_error_stretch_to_excel(fractions, max_errors, min_errors, stretches, fi
             'mean_stretch': sum(str_list) / len(str_list),
             'min_stretch': min(str_list),
             'max_stretch': max(str_list),
+            'mean_stretch_arrow': sum(str_arrow_list) / len(str_arrow_list),
+            'min_stretch_arrow': min(str_arrow_list),
+            'max_stretch_arrow': max(str_arrow_list),
             'reps': reps,
             'error_cutoff': error_cutoff,
             'file_name': file_name
@@ -53,7 +58,7 @@ def save_error_stretch_to_excel(fractions, max_errors, min_errors, stretches, fi
     summary_df = pd.DataFrame(summary_records)
 
     # Ensure output directory exists
-    folder = "results/yes_constraints"
+    folder = "results/with_arrow_considered"
     os.makedirs(folder, exist_ok=True)
     excel_path = os.path.join(folder, f"{os.path.splitext(file_name)[0]}.xlsx")
 

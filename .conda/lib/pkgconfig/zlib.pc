@@ -1,0 +1,13 @@
+prefix=/Users/sushantb/Desktop/myproj/DDP_under_predictions/.conda
+exec_prefix=/Users/sushantb/Desktop/myproj/DDP_under_predictions/.conda
+libdir=/Users/sushantb/Desktop/myproj/DDP_under_predictions/.conda/lib
+sharedlibdir=/Users/sushantb/Desktop/myproj/DDP_under_predictions/.conda/lib
+includedir=/Users/sushantb/Desktop/myproj/DDP_under_predictions/.conda/include
+
+Name: zlib
+Description: zlib compression library
+Version: 1.2.13
+
+Requires:
+Libs: -L${libdir} -L${sharedlibdir} -lz
+Cflags: -I${includedir}
