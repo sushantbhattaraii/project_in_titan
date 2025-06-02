@@ -35,7 +35,7 @@ def main(network_file_name, repetitions, error_cutoff, overlap):
         )
 
         pattern5 = re.compile(
-            r"Stretch_Arrow \(sum_of_distance_in_mst / sum_of_distance_in_G\) =\s*([0-9.+\-eE]+)"
+            r"Stretch_Arrow \(sum_of_distance_in_mst_g / sum_of_distance_in_G\) =\s*([0-9.+\-eE]+)"
         )
 
         for frac in fractions:

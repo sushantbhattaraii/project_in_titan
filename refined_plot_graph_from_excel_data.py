@@ -8,7 +8,8 @@ from fractions import Fraction
 import os
 
 # Gather and sort all Excel files
-files = sorted(glob.glob('./results/maxweight20new_data/2048/2048nodes_diameter*.xlsx'))
+
+files = sorted(glob.glob('./results/only_zero_error/random2/256nodes_dia*.xlsx'))
 
 # Extract node count and overlap from filename
 m = re.search(r'(\d+)nodes_', files[0])
@@ -21,7 +22,7 @@ overlap_value = m2.group(1) if m2 else "?"
 cmap = plt.get_cmap('tab20')
 all_x = []
 
-# Create two subplots: one for error, one for stretch
+# Create two subplots: one for error, one for stretch, one for stretch_arrow
 fig, (ax1, ax3) = plt.subplots(1, 2, figsize=(14, 11), sharex=True)
 
 for idx, f in enumerate(files):
@@ -29,10 +30,12 @@ for idx, f in enumerate(files):
     mean_max_error = df.groupby('fraction')['max_error'].mean()
     # mean_min_error = df.groupby('fraction')['min_error'].mean()
     mean_stretch = df.groupby('fraction')['stretch'].mean()
+    mean_stretch_arrow = df.groupby('fraction')['stretch_arrow'].mean()
     
     mean_max_error.index = mean_max_error.index * int(node_count)
     # mean_min_error.index = mean_min_error.index * int(node_count)
     mean_stretch.index = mean_stretch.index * int(node_count)
+    mean_stretch_arrow.index = mean_stretch_arrow.index * int(node_count)
     
     all_x.extend(mean_max_error.index.tolist())
     # all_x.extend(mean_min_error.index.tolist())
@@ -62,9 +65,25 @@ for idx, f in enumerate(files):
         mean_stretch.index,
         mean_stretch.values,
         marker='o',
-        label=f'Stretch for Error ≤ {actual_cutoff}',
+        label=f'PArrow Stretch for Error ≤ {actual_cutoff}',
         color=cmap(2 * idx + 1)
     )
+
+    ax3.plot(
+        mean_stretch_arrow.index,
+        mean_stretch_arrow.values,
+        marker='o',
+        label=f'Arrow Stretch for Error ≤ {actual_cutoff}',
+        color=cmap(2 * idx + 2)
+    )
+
+    # ax4.plot(
+    #     mean_stretch_arrow.index,
+    #     mean_stretch_arrow.values,
+    #     marker='o',
+    #     label=f'Arrow Stretch for Error ≤ {actual_cutoff}',
+    #     color=cmap(2 * idx + 2)
+    # )
 
 unique_x = sorted(set(all_x))
 
@@ -83,22 +102,29 @@ ax1.legend(loc='best')
 # # ax1.grid(True)
 
 # Format stretch subplot
-ax3.set_ylabel('Stretch')
+ax3.set_ylabel('PArrow and Arrow Stretch')
 ax3.set_xlabel(f'Number of predicted nodes among {node_count} nodes (# of operations)')
-ax3.set_title(f'Stretch vs Fraction of Predicted Nodes')
+ax3.set_title(f'PArrow & Arrow Stretch vs Fraction of Predicted Nodes')
 ax3.legend(loc='best')
 # ax2.grid(True)
+
+# Format stretch_arrow subplot
+# ax4.set_ylabel('Arrow Stretch')
+# ax4.set_xlabel(f'Number of predicted nodes among {node_count} nodes (# of operations)')
+# ax4.set_title(f'Arrow Stretch vs Fraction of Predicted Nodes')
+# ax4.legend(loc='best')
 
 # Set shared x-ticks
 ax1.set_xticks(unique_x)
 ax3.set_xticks(unique_x)
+# ax4.set_xticks(unique_x)
 
 # Save or display
 plt.tight_layout()
-folder = "plots_for_the_paper"
-folder2 = "random"
+folder = "only_zero_error_plots"
+folder2 = "random2"
 # filename = f'{node_count}_nodes.png'
-filename = f'{node_count}_nodes_overlap{overlap_value}.png'
+filename = f'{node_count}_nodes_cutoff_{actual_cutoff}.png'
 path_to_save = os.path.join('results', folder, folder2, filename)
 
 plt.savefig(path_to_save)
